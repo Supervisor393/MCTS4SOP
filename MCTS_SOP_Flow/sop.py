@@ -24,10 +24,6 @@ class SOPGenerator:
         self.steps.append(sop_text.strip())  # 保存已生成的步骤，防止重复
         return sop_text.strip()  # 返回一个步骤，去除空白行
 
-    def evaluate_sop(self, sop_steps):
-        """评估生成的SOP"""
-        return sum([len(step) for step in sop_steps])  # 一个简单的评分方法，实际可以更复杂
-
     def get_formatted_sop(self):
         """返回格式化的SOP步骤（按序号显示）"""
         formatted_steps = [f"{i+1}. {step}" for i, step in enumerate(self.steps)]
