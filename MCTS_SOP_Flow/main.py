@@ -5,16 +5,26 @@ from mcts import MCTS
 def run():
     task_description = "Diagnose the root cause of a system failure"
     
-    # 初始化MCTS，根节点为任务描述
-    mcts = MCTS(root_state=task_description, max_depth=5, max_steps=5)
+    # 设置 MCTS 的最大深度和迭代次数
+    max_depth = 3  # 最大深度
+    iterations = 5  # 迭代次数
 
-    # 使用MCTS控制SOP生成过程
+    # 选择生成SOP的模型，可以选择 gpt-3.5-turbo 或 gpt-4
+    sop_model_choice = "gpt-4"  
+
+    # 选择辩论模型，可以选择 gpt-3.5-turbo 或 gpt-4
+    debate_model_choice = "gpt-4"  
+
+    # 初始化 MCTS，传递任务描述、最大深度和模型选择
+    mcts = MCTS(root_state=task_description, max_depth=max_depth, model=sop_model_choice, debate_model=debate_model_choice)
+
+    # 使用 MCTS 控制 SOP 生成过程
     print(f"Starting MCTS to generate SOP for: {task_description}")
-    sop_steps = mcts.search(iterations=5)
+    sop_steps = mcts.search(iterations=iterations)
 
-    # 输出生成的SOP步骤
+    # 输出生成的 SOP 步骤
     print("\nGenerated SOP steps:")
-    formatted_sop = mcts.sop_generator.get_formatted_sop()  # 获取格式化的SOP步骤
+    formatted_sop = mcts.sop_generator.get_formatted_sop()  # 获取格式化的 SOP 步骤
     print(formatted_sop)
 
 if __name__ == "__main__":

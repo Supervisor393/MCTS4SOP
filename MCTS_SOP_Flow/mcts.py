@@ -1,12 +1,12 @@
 # mcts.py
 import numpy as np
-import random
 from sop import SOPGenerator
-from agent import MultiAgentSystem  # 假设有多智能体系统用于评估步骤
+from agent import MultiAgentSystem  # 引入多智能体系统
+from models import generate_text  # 引入模型生成文本的函数
 
 # 定义节点类
 class Node:
-    def __init__(self, state, parent=None):
+    def __init__(self, state, parent=None, depth=0):
         self.state = state  # 当前节点的状态，表示一个SOP步骤
         self.parent = parent  # 父节点
         self.children = []  # 子节点
@@ -14,6 +14,7 @@ class Node:
         self.value = 0  # 节点的评估值
         self.reward = 0  # 节点的奖励值
         self.confidence = 0  # 大模型的置信度
+        self.depth = depth  # 节点的深度
 
     def uct(self, parent_visits, c=1.41):
         """计算UCT值"""
@@ -22,11 +23,11 @@ class Node:
         return self.value / self.visits + c * np.sqrt(np.log(parent_visits) / self.visits)
 
 class MCTS:
-    def __init__(self, root_state, max_depth=10, max_steps=5):
+    def __init__(self, root_state, max_depth=10, model="gpt-4", debate_model="gpt-4"):
         self.root = Node(state=root_state)  # 根节点代表SOP的开始
-        self.max_depth = max_depth
-        self.sop_generator = SOPGenerator(max_steps=max_steps)  # 设置SOP步骤最大数量
-        self.multi_agent_system = MultiAgentSystem()  # 初始化多智能体系统
+        self.max_depth = max_depth  # 最大搜索深度
+        self.sop_generator = SOPGenerator(model=model)  # 初始化 SOP 生成器，传入选择的模型
+        self.multi_agent_system = MultiAgentSystem(debate_model=debate_model)  # 初始化多智能体系统并传递辩论模型
 
     def selection(self, node):
         """选择最优节点"""
@@ -39,19 +40,29 @@ class MCTS:
     def expansion(self, node):
         """扩展节点"""
         print(f"Expansion phase: Expanding node {node.state}")
-        # 每个节点扩展3个子节点，表示每个步骤的不同选项
-        for i in range(3):  # 假设每个步骤有3个选项
-            new_step = self.sop_generator.generate_sop(node.state)  # 根据当前步骤生成新的步骤
-            if new_step:  # 确保生成的步骤不为空
-                new_node = Node(state=f"{node.state}_step_{i}: {new_step}", parent=node)
-                node.children.append(new_node)
-                print(f"Expanded to new child node {new_node.state}")
+        if node.depth < self.max_depth:  # 控制扩展深度，超过最大深度不再扩展
+            if len(node.children) < 3:  # 每个节点最多扩展3个子节点
+                new_step = self.sop_generator.generate_sop(node.state)  # 根据当前步骤生成新的步骤
+                if new_step:  # 确保生成的步骤不为空
+                    new_node = Node(state=new_step, parent=node, depth=node.depth + 1)
+                    node.children.append(new_node)
+                    print(f"Expanded to new child node {new_node.state}")
 
     def simulation(self, node):
         """模拟：根据当前节点的状态进行模拟"""
         print(f"Simulation phase: Simulating from node {node.state}")
-        # 使用多智能体系统对节点进行评估，模拟结果作为奖励
-        reward = self.multi_agent_system.evaluate_step(node.state)
+        
+        # 收集从根节点到当前节点的SOP步骤路径
+        path = []
+        current_node = node
+        while current_node:
+            path.append(current_node.state)
+            current_node = current_node.parent
+        path.reverse()  # 反转路径，确保顺序从根节点到叶节点
+
+        # 将整个路径传递给多智能体系统进行辩论和评估
+        reward = self.multi_agent_system.evaluate_path(path)
+        
         print(f"Simulation result (via multi-agent evaluation): {reward}")
         return reward
 
@@ -87,6 +98,6 @@ class MCTS:
                 current_node = max(current_node.children, key=lambda child: child.uct(current_node.visits))
             else:
                 break
-        
+
         # 返回步骤列表（从根节点到叶节点的SOP步骤链）
         return sop_steps[::-1]  # 返回的是从根节点到叶节点的步骤链
