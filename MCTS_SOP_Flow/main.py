@@ -24,8 +24,7 @@ def run():
 
     # 输出生成的 SOP 步骤
     print("\nGenerated SOP steps:")
-    formatted_sop = mcts.sop_generator.get_formatted_sop()  # 获取格式化的 SOP 步骤
-    print(formatted_sop)
+    print(sop_steps)
 
 if __name__ == "__main__":
     run()

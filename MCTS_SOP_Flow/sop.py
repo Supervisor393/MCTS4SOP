@@ -23,8 +23,3 @@ class SOPGenerator:
         
         self.steps.append(sop_text.strip())  # 保存已生成的步骤，防止重复
         return sop_text.strip()  # 返回一个步骤，去除空白行
-
-    def get_formatted_sop(self):
-        """返回格式化的SOP步骤（按序号显示）"""
-        formatted_steps = [f"{i+1}. {step}" for i, step in enumerate(self.steps)]
-        return "\n".join(formatted_steps)
