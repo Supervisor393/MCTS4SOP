@@ -1,15 +1,40 @@
+# sop.py
 from models import generate_text
+from prompt import generate_sop_prompt_from_task, generate_sop_prompt_from_step  # 导入新的提示词函数
 
 class SOPGenerator:
-    def __init__(self):
-        self.steps = []
+    def __init__(self, max_steps=5):
+        self.steps = []  # 用于存储已生成的SOP步骤
+        self.max_steps = max_steps  # 控制SOP的最大步骤数
 
     def generate_sop(self, task_description):
-        """生成SOP的步骤"""
-        prompt = f"Please generate the next step in the Standard Operating Procedure (SOP) for the following task: {task_description}"
+        """生成SOP的步骤，限制总步骤数"""
+        # 如果已经达到最大步骤数，则停止生成
+        if len(self.steps) >= self.max_steps:
+            return None  # 返回None表示步骤已满，不能继续生成
+        
+        # 如果是第一次生成步骤，使用任务描述生成第一步SOP
+        if not self.steps:
+            prompt = generate_sop_prompt_from_task(task_description)  # 初始任务描述生成SOP
+        else:
+            # 对于后续步骤，生成基于前一个步骤的SOP
+            prompt = generate_sop_prompt_from_step(self.steps[-1])  # 使用上一个步骤的状态作为任务描述
+
+        # 使用模型生成SOP步骤
         sop_text = generate_text(prompt)
+        
+        # 避免重复步骤
+        while sop_text in self.steps:
+            sop_text = generate_text(generate_sop_prompt_from_task(task_description))  # 如果生成的步骤重复，再生成一次
+        
+        self.steps.append(sop_text.strip())  # 保存已生成的步骤，防止重复
         return sop_text.strip()  # 返回一个步骤，去除空白行
 
     def evaluate_sop(self, sop_steps):
         """评估生成的SOP"""
         return sum([len(step) for step in sop_steps])  # 一个简单的评分方法，实际可以更复杂
+
+    def get_formatted_sop(self):
+        """返回格式化的SOP步骤（按序号显示）"""
+        formatted_steps = [f"{i+1}. {step}" for i, step in enumerate(self.steps)]
+        return "\n".join(formatted_steps)
